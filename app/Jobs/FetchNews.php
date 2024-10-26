@@ -10,41 +10,56 @@ use Illuminate\Queue\SerializesModels;
 use App\Models\Country;
 use App\Models\News;
 use SimplePie\SimplePie;
+use Illuminate\Support\Carbon;
 
 class FetchNews implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $country;
+    protected $url;
 
-    public function __construct(Country $country)
+    public function __construct(Country $country, $url)
     {
         $this->country = $country;
+        $this->url = $url;
     }
 
     public function handle()
     {
-        $url = "https://news.google.com/rss?hl={$this->country->hl}&gl={$this->country->gl}";
-
         $feed = new SimplePie();
-        $feed->set_feed_url($url);
+        $feed->set_feed_url($this->url);
         $feed->enable_cache(false);
         $feed->init();
         $feed->handle_content_type();
 
         foreach ($feed->get_items() as $item) {
-            News::create([
+            $feedId = $item->get_id();
+
+            if (News::where('feed_id', $feedId)->exists()) {
+                continue;
+            }
+
+            $publishedAt = Carbon::createFromFormat('d F Y, g:i a', $item->get_gmdate());
+            $revisedAt = $item->get_updated_gmdate() ? Carbon::createFromFormat('d F Y, g:i a', $item->get_updated_gmdate()) : null;
+            $text = htmlspecialchars($item->get_description() ?: $item->get_content());
+            $title = htmlspecialchars($item->get_title());
+
+            $lang = $this->country->get_lang();
+
+            $news = News::create([
+                'feed_id' => $feedId,
                 'country_id' => $this->country->id,
-                'title_es' => $item->get_title(),
-                'title_pt' => $item->get_title(),
-                'text_es' => $item->get_description() ?: $item->get_content(),
-                'text_pt' => $item->get_description() ?: $item->get_content(),
+                'title_'.$lang => $title,
+                'text_'.$lang  => $text,
                 'link' => $item->get_link(),
-                'source' => $item->get_feed()->get_title(),
+                'source' => $item->get_source(),
                 'author' => $item->get_author() ? $item->get_author()->get_name() : 'Desconhecido',
-                'published_at' => $item->get_date('Y-m-d H:i:s'),
-                'revised_at' => now(),
+                'published_at' => $publishedAt,
+                'revised_at' => $revisedAt,
             ]);
+
+            TranslateNews::dispatch($news)->delay(now()->addMinutes(1));
         }
     }
 }

@@ -3,15 +3,49 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class News extends Model
+class News extends Model implements HasMedia
 {
+    use InteractsWithMedia;
+
     protected $fillable = [
-        'country_id', 'title_es', 'title_pt', 'text_es', 'text_pt', 'link', 'source', 'author', 'published_at', 'revised_at'
+        'feed_id',
+        'country_id',
+        'title_es',
+        'title_pt',
+        'text_es',
+        'text_pt',
+        'link',
+        'source',
+        'author',
+        'published_at',
+        'revised_at'
     ];
 
     public function country()
     {
         return $this->belongsTo(Country::class);
+    }
+
+    protected $dates = [
+        'published_at',
+        'revised_at'
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($news) {
+            $news->published_at = $news->published_at ? $news->published_at->setTimezone('UTC') : null;
+            $news->revised_at = $news->revised_at ? $news->revised_at->setTimezone('UTC') : null;
+        });
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('ai_images');
     }
 }
