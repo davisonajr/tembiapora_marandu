@@ -10,7 +10,7 @@ class ImageGenerationService
 {
     const apiUrl = 'https://image.pollinations.ai/prompt/';
     const defaultModel = '';
-    const defaultSeed = 10;
+    const defaultSeed = 5;
     const defaultWidth = 1920;
     const defaultHeight = 1080;
     const defaultNoLogo = true;

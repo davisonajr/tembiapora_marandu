@@ -4,8 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\News;
-use App\Services\ImageGenerationService;
-use Illuminate\Support\Facades\Storage;
+use App\Jobs\CreateAIImage;
 
 class GenerateNewsImage extends Command
 {
@@ -15,25 +14,20 @@ class GenerateNewsImage extends Command
     public function handle()
     {
         $newsId = $this->argument('newsId');
-        $news = News::find($newsId);
+        
+        $news = $newsId ? collect(News::find($newsId)) : News::withoutAiImages()->take(5)->get();
 
         if (!$news) {
             $this->error("News item with ID {$newsId} not found.");
             return;
         }
 
-        $prompt = $news->title_pt ?: $news->title_es ?: $news->title_en;
-        dd($prompt);
-        $imageContent = ImageGenerationService::generateImage($news, $prompt);
+        foreach($news as $new)
+        {
 
-        if ($imageContent) {
-            $imagePath = 'ai_images/' . uniqid() . '.png';
-            Storage::disk('local')->put($imagePath,$imageContent);
-            $news->addMedia(storage_path('app/private/' . $imagePath))->toMediaCollection('ai_images');
-
-            $this->info("Image generated and saved for news item with ID {$newsId}.");
-        } else {
-            $this->error("Failed to generate image for news item with ID {$newsId}.");
+            $createAIImage = new CreateAIImage($new);
+            $createAIImage->handle();
+            $this->info("Image generated and saved for news item with ID {$new->id}.");
         }
     }
 }

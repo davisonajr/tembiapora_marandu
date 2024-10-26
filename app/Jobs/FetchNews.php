@@ -59,7 +59,7 @@ class FetchNews implements ShouldQueue
                 'revised_at' => $revisedAt,
             ]);
 
-            TranslateNews::dispatch($news)->delay(now()->addMinutes(1));
+            // TranslateNews::dispatch($news)->delay(now()->addMinutes(1));
         }
     }
 }

@@ -5,6 +5,8 @@ namespace App\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use App\Models\News;
+use App\Services\ImageGenerationService;
+use Illuminate\Support\Facades\Storage;
 
 class CreateAIImage implements ShouldQueue
 {
@@ -24,12 +26,14 @@ class CreateAIImage implements ShouldQueue
      */
     public function handle(): void
     {
-        $tokens = tokenize($this->news->text_pt, \TextAnalysis\Tokenizers\PennTreeBankTokenizer::class);
+        $prompt = $this->news->title_pt ?: $this->news->title_es ?: $this->news->title_en;
 
-        $tokens = normalize_tokens($tokens);
+        $imageContent = ImageGenerationService::generateImage($prompt);
 
-        $sentimentScores = vader($tokens);
-
-        
+        if ($imageContent) {
+            $imagePath = 'ai_images/' . uniqid() . '.png';
+            Storage::disk('local')->put($imagePath,$imageContent);
+            $this->news->addMedia(storage_path('app/private/' . $imagePath))->toMediaCollection('ai_images');        
+        }
     }
 }
