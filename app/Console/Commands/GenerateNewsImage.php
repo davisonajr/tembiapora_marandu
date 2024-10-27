@@ -24,10 +24,8 @@ class GenerateNewsImage extends Command
 
         foreach($news as $new)
         {
-
-            $createAIImage = new CreateAIImage($new);
-            $createAIImage->handle();
-            $this->info("Image generated and saved for news item with ID {$new->id}.");
+            CreateAIImage::dispatch($news);
+            $this->info("Job programed for creatng {$new->id} image.");
         }
     }
 }
