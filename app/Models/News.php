@@ -47,12 +47,20 @@ class News extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('ai_images');
+        $this->addMediaCollection('ai_speechs');
     }
 
     public function scopeWithoutAiImages($query)
     {
         return $query->whereDoesntHave('media', function ($query) {
             $query->where('collection_name', 'ai_images');
+        });
+    }
+
+    public function scopeWithoutAiSpeechs($query)
+    {
+        return $query->whereDoesntHave('media', function ($query) {
+            $query->where('collection_name', 'ai_speechs');
         });
     }
 }
